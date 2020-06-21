@@ -16,7 +16,7 @@
    * 1288 counts per volt = 386 counts. 3320 - 386 - 127 = 2706.
    * So your new WAS_ZERO is 2706.
    */
-  #define WAS_ZERO 3193    
+  #define WAS_ZERO 512    
 
   //How many degrees before decreasing Max PWM
   #define LOW_HIGH_DEGREES 5.0
@@ -39,18 +39,20 @@
   //Connect ground only for cytron, Connect Ground and +5v for IBT2
     
   //Dir1 for Cytron Dir, Both L and R enable for IBT2
-  #define DIR1_RL_ENABLE  4  //PD4
+  #define DIR1_RL_ENABLE  12  //PD4
 
   //PWM1 for Cytron PWM, Left PWM for IBT2
-  #define PWM1_LPWM  3  //PD3
+  #define PWM1_LPWM  11  //PD3
 
   //Not Connected for Cytron, Right PWM for IBT2
   #define PWM2_RPWM  9 //D9
 
   //--------------------------- Switch Input Pins ------------------------
-  #define STEERSW_PIN 6 //PD6
+  #define STEERSW_PIN 10 //PD6
   #define WORKSW_PIN 7  //PD7
   #define REMOTE_PIN 8  //PB0
+
+  #define STEERING_PIN A0
 
   // MCP23017 I2C address is 0x20(32)
   #define Addr 0x20
@@ -130,15 +132,15 @@
       float Kp = 0.0f;  //proportional gain
       float lowPWM = 0.0f;  //band of no action
       float Kd = 0.0f;  //derivative gain 
-      float steeringPositionZero = 3320.0;
+      float steeringPositionZero = 512;
       byte minPWM=0;
       byte highPWM=100;//max PWM value
-      float steerSensorCounts=10;        
+      float steerSensorCounts=9;        
   };  Storage steerSettings;  //27 bytes
 
     //Variables for settings - 0 is false  
    struct Setup {
-      byte InvertWAS = 0;
+      byte InvertWAS = 1;
       byte InvertRoll = 0;
       byte MotorDriveDirection = 0;
       byte SingleInputWAS = 1;
@@ -426,18 +428,25 @@ void loop()
     //MCP_Write(PortB,relay);   
   
     //get steering position       
-    if (aogSettings.SingleInputWAS)   //Single Input ADS
-    {
-      steeringPosition = ads.readADC_SingleEnded(0);    //ADS1115 Single Mode 
+    // if (aogSettings.SingleInputWAS)   //Single Input ADS
+    // {
+    //   steeringPosition = ads.readADC_SingleEnded(0);    //ADS1115 Single Mode 
       
-       steeringPosition = (steeringPosition >> 2); //bit shift by 2  0 to 6640 is 0 to 5v
-    }    
-    else    //ADS1115 Differential Mode
-    {
-      steeringPosition = ads.readADC_Differential_0_1(); //ADS1115 Differential Mode
+    //    steeringPosition = (steeringPosition >> 2); //bit shift by 2  0 to 6640 is 0 to 5v
+    // }    
+    // else    //ADS1115 Differential Mode
+    // {
+    //   steeringPosition = ads.readADC_Differential_0_1(); //ADS1115 Differential Mode
            
-      steeringPosition = (steeringPosition >> 2); //bit shift by 2  0 to 6640 is 0 to 5v
-    }
+    //   steeringPosition = (steeringPosition >> 2); //bit shift by 2  0 to 6640 is 0 to 5v
+    // }
+    analogRead(STEERING_PIN); //discard initial reading // Arduino ADC     
+    steeringPosition = analogRead(STEERING_PIN);    delay(1);
+    steeringPosition += analogRead(STEERING_PIN);    delay(1);
+    steeringPosition += analogRead(STEERING_PIN);    delay(1);
+    steeringPosition += analogRead(STEERING_PIN);
+    steeringPosition = steeringPosition >> 2; //divide by 4
+
    
     //DETERMINE ACTUAL STEERING POSITION
     steeringPosition = (steeringPosition - steerSettings.steeringPositionZero);   //read the steering position sensor
